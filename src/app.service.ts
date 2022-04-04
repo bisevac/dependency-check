@@ -61,23 +61,15 @@ export class AppService {
     const outdatedDependecyList: OutdatedDependecy[] =
       await this.getOutdatedDependecyList(url);
 
-    console.info('mail', {
+    const mailData = {
       to: mails,
-      subject: `${url} Dependecy Check ${
-        subscribeId ? 'SubscribeId: ' + subscribeId : ''
-      }`,
+      subject: `${url} Dependecy Check SubscribeId: ${subscribeId}`,
       text: `${url} outdated dependency list:`,
       html: JSON.stringify(outdatedDependecyList, null, 2),
-    });
+    };
 
-    /* await this.mailService.send({
-      to: mails,
-      subject: `${url} Dependecy Check ${
-        subscribeId ? 'SubscribeId: ' + subscribeId : ''
-      }`,
-      text: `${url} outdated dependency list:`,
-      html: JSON.stringify(outdatedDependecyList, null, 2),
-    }); */
+    console.info('sending email', mailData);
+    await this.mailService.send(mailData);
 
     return outdatedDependecyList;
   }
