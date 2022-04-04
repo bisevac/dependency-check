@@ -16,21 +16,20 @@ export class CronjobService {
     jobId: string,
     mails: string[],
     url: string,
+    cronTime: string,
     fn: CronCommand,
   ): void {
-    const date = new Date();
-    // const cronTime = `${date.getSeconds()} ${date.getMinutes()} ${date.getHours()} * * *`;
-    const cronTime = `*/30 * * * * *`;
-
     const job = new CronJob(cronTime, fn);
 
     const dependencyCronJobs: DependecyCronJob[] = this.getDependecyJobs();
 
+    /* For Load */
     if (!dependencyCronJobs.find((c) => c.jobId === jobId)) {
       dependencyCronJobs.push({
         jobId,
         mails,
         url,
+        cronTime,
       } as DependecyCronJob);
 
       this.setDependencyJobs(dependencyCronJobs);

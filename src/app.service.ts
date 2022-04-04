@@ -1,35 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import {
-  Dependency,
-  DependencyList,
-  EDependencyType,
-  IComposerJson,
-  INPMPackageJson,
-  OutdatedDependecy,
-} from './app.interface';
+import { Dependency, DependencyList, OutdatedDependecy } from './app.interface';
 import { versionCompare, versionFormater } from './common/utils';
 import { CronjobService } from './cronjob/cronjob.service';
-import { GithubApiService } from './github.api/github.api.service';
+import { DependencyCollectorService } from './dependency-collector/dependency-collector.service';
 import { MailService } from './mail/mail.service';
 import { FactoryVersionPickerService } from './version-picker/version-picker.service';
 
 @Injectable()
 export class AppService {
   constructor(
-    private githubApiService: GithubApiService,
     private versionPicker: FactoryVersionPickerService,
     private cronjobService: CronjobService,
+    private dependencyCollectorService: DependencyCollectorService,
     private mailService: MailService,
   ) {
     this.loadDependencyJobs();
   }
 
-  private async getOutdatedDependecyList(
-    url: string,
-  ): Promise<OutdatedDependecy[]> {
+  async getOutdatedDependecyList(url: string): Promise<OutdatedDependecy[]> {
     const outDatedDependecyList: OutdatedDependecy[] = [];
 
-    const dependencyList: DependencyList = await this.getRepoDependecy(url);
+    const dependencyList: DependencyList =
+      await this.dependencyCollectorService.githubGetDependencyList(url);
 
     for (let i = 0; i < dependencyList.length; i++) {
       const dependency: Dependency = dependencyList[i];
@@ -61,59 +53,7 @@ export class AppService {
     return outDatedDependecyList;
   }
 
-  private async getRepoDependecy(url: string): Promise<DependencyList> {
-    const dependencyList: DependencyList = [];
-
-    const [repo, owner] = url
-      .trim()
-      .replace(/\.git$/, '')
-      .split('/')
-      .reverse();
-
-    const composerPackageJson: IComposerJson = JSON.parse(
-      await this.githubApiService.getContent(owner, repo, 'composer.json'),
-    );
-
-    if (composerPackageJson) {
-      const composerPackages = composerPackageJson.require;
-
-      const composerMappedPackages: DependencyList = Object.keys(
-        composerPackages,
-      ).map((p) => {
-        return {
-          type: EDependencyType.composer,
-          packageName: p,
-          version: composerPackages[p],
-        } as Dependency;
-      });
-
-      dependencyList.push(...composerMappedPackages);
-    }
-
-    const npmPackageJson: INPMPackageJson = JSON.parse(
-      await this.githubApiService.getContent(owner, repo, 'package.json'),
-    );
-
-    if (npmPackageJson) {
-      const npmPackages = npmPackageJson.dependencies;
-
-      const npmMappedPackages: DependencyList = Object.keys(npmPackages).map(
-        (p) => {
-          return {
-            type: EDependencyType.npm,
-            packageName: p,
-            version: npmPackages[p],
-          } as Dependency;
-        },
-      );
-
-      dependencyList.push(...npmMappedPackages);
-    }
-
-    return dependencyList;
-  }
-
-  async dependencyCheckRun(
+  private async dependencyCheckAndSendEmail(
     subscribeId: string,
     mails: string[],
     url: string,
@@ -147,11 +87,16 @@ export class AppService {
   }
 
   subscribeDependencyCheck(subscribeId: string, mails: string[], url: string) {
+    /* Every Day */
+    const date = new Date();
+    const cronTime = `${date.getSeconds()} ${date.getMinutes()} ${date.getHours()} * * *`;
+
     this.cronjobService.addDependencyCronJob(
       subscribeId,
       mails,
       url,
-      this.dependencyCheckRun.bind(this, subscribeId, mails, url),
+      cronTime,
+      this.dependencyCheckAndSendEmail.bind(this, subscribeId, mails, url),
     );
   }
 

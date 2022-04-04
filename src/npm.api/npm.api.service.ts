@@ -13,7 +13,7 @@ export class NpmApiService {
   /**
    * @ApiDoc https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
    */
-  async getDistTags(name: string) {
+  async getDistTags(name: string): Promise<INPMDistTags> {
     const reqUrl = `${this.baseApiUrl}/-/package/${name}/dist-tags`;
 
     const response: AxiosResponse<INPMDistTags> = await firstValueFrom(
