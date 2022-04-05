@@ -4,7 +4,7 @@
 
 *You can check outdated dependency your github project.*
 
-`AVAIBLE REGISTRY`
+`AVAILABLE DEPENDENCY REPOSITORY`
 * [NPM](https://www.npmjs.com/)
 * [COMPOSER](https://packagist.org/)
 
